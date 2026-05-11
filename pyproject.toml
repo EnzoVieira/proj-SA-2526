@@ -1,0 +1,12 @@
+[project] 
+name = "pi-server" 
+version = "0.1.0" 
+description = "Arduino sensor → ML classifier → Home Assistant" 
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff >= 0.8.1",
+]
