@@ -1,3 +1,6 @@
+import asyncio
+
+from pi_server.core.manager import Manager
 from pi_server.utils.logger import get_logger
 
 """
@@ -10,8 +13,15 @@ from pi_server.utils.logger import get_logger
 
 log = get_logger("server.log", console=True)
 
-def main():
-    log.info("Hello World!")
+async def main():
+    log.info("Starting server...")
+    manager = Manager()
+    try:
+        await manager.start()
+    except KeyboardInterrupt:
+        log.info("Shutting down...")
+    finally:
+        await manager.stop()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

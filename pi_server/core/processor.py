@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from asyncio import Queue
+from asyncio import CancelledError, Queue, Task
 from dataclasses import dataclass
 from typing import Final
 
@@ -18,42 +18,55 @@ from pi_server.core.actions import ActionHandler
 """
 
 _QUEUE_MAXSIZE: Final[int] = 100
+_HOME_ASSISTANT_URL: Final[str] = "..."
 
 log = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class Processor:
-    queue: Queue[SensorData]
-    model: MLModel
-    actions: ActionHandler
-    running: bool
+    _queue: Queue[SensorData]
+    _model: MLModel
+    _actions: ActionHandler
+    _running: bool
+    _task: Task | None = None
 
     def __init__(self):
-        self.queue = Queue(maxsize=_QUEUE_MAXSIZE)
-        self.model = MLModel()
-        self.actions = ActionHandler()
-        self.running = False
+        self._queue = Queue(maxsize=_QUEUE_MAXSIZE)
+        self._model = MLModel()
+        self._actions = ActionHandler(_HOME_ASSISTANT_URL)
+        self._running = False
 
     async def start(self):
-        self.running = True
-        asyncio.create_task(self._worker())
+        self._running = True
+        self._task = asyncio.create_task(self._worker())
 
     async def stop(self):
-        self.running = False
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+        await self._actions.close()
 
     async def add(self, data: dict):
-        data = SensorData(**data)
-        await self.queue.put(data)
+        sensor_data = SensorData(**data)
+        await self._queue.put(sensor_data)
 
     async def _worker(self):
         log.info("Starting worker...")
-        while self.running:
-            data = await self.queue.get()
-            try:
-                label = self.model.predict(data)
-                await self.actions.handle(label, data)
-                log.info(f"Processing: {data} → {label}...")
-            except Exception as e:
-                log.error(f"Error in worker: {e}...")
-            finally:
-                self.queue.task_done()
+        try:
+            while self._running:
+                data = await self._queue.get()
+                try:
+                    log.info(f"Predicting label of data: {data}...")
+                    label = self._model.predict(data)
+                    log.info(f"Handling label: {label}...")
+                    await self._actions.handle(label, data)
+                except Exception as e:
+                    log.error(f"Error in worker: {e}...")
+                finally:
+                    self._queue.task_done()
+        except asyncio.CancelledError:
+            log.info("Worker cancelled, shutting processor down...")
