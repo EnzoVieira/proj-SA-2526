@@ -55,7 +55,8 @@ class Ingester:
                     if not line:
                         continue
                     payload = json.loads(line)
-
+                
+                log.info(f"Ingesting sensor data: {payload}...")
                 data = SensorData(**payload)
                 await self._bus.publish(data)
             except Exception as e:
