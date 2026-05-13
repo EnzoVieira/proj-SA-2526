@@ -30,6 +30,7 @@ class LightSensorData(BaseModel):
     is_bright: bool     # True se light_level >= threshold
 
 
+
 class SensorData(BaseModel):
     """Agregação de todos os dados de sensores"""
     dht11: DHT11Data

@@ -14,10 +14,10 @@ from pi_server.core.domain import ConditionLabel, SensorData
 
 log = logging.getLogger(__name__)
 
+
 # TODO: load model here later
 @dataclass(slots=True)
 class MLModel:
-
     def __init__(self):
         pass
 

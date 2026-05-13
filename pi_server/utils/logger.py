@@ -43,5 +43,6 @@ def get_logger(name: str, *, log_dir: Path = _LOG_DIR, console: bool = False) ->
     # suppress paralel logs
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
 
     return logger

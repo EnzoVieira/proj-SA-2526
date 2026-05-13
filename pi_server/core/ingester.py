@@ -1,4 +1,5 @@
 import asyncio
+import random
 import json
 import logging
 import time
@@ -7,10 +8,9 @@ import re
 from typing import Final
 from dataclasses import dataclass
 
-import serial
 from serial import Serial
 
-from pi_server.core.processor import Processor
+from pi_server.core.bus import EventBus
 from pi_server.core.domain import SensorData, DHT11Data, LightSensorData
 
 """
@@ -23,41 +23,52 @@ from pi_server.core.domain import SensorData, DHT11Data, LightSensorData
 
 log = logging.getLogger(__name__)
 
-_TIMEOUT: Final[int] = 1 # second
+_PORT: Final[str] = "..."
+_BAUDRATE: Final[int] = 9600
+_SERIAL_TIMEOUT: Final[int] = 1  # second
+_INGESTER_TIMEOUT: Final[int] = 2  # seconds
 _LIGHT_THRESHOLD: Final[int] = 500
 
 @dataclass(slots=True)
 class Ingester:
-    _serial: Serial
-    _processor: Processor
-    _running: bool
+    _bus: EventBus
+    _serial: Serial | None
+    _debug: bool
     _temp: float | None = None
     _humidity: float | None = None
     _light_level: int | None = None
 
-    def __init__(self, port: str, baudrate: int, processor):
-        self._serial = Serial(port, baudrate, timeout=_TIMEOUT)
-        self._processor = processor
-        self._running = False
+    def __init__(self, bus: EventBus, *, debug: bool = False):
+        self._bus = bus
+        self._debug = debug
         self._temp = None
         self._humidity = None
         self._light_level = None
+        
+        if self._debug:
+            self._serial = None
+            log.warning("Running ingester in DEBUG mode")
+        else:
+            self._serial = Serial(_PORT, _BAUDRATE, timeout=_SERIAL_TIMEOUT)
 
     async def start(self):
-        self._running = True
-        log.info("Arduino reader started...")
-
-        while self._running:
-            line = self._serial.readline().decode("utf-8").strip()
-            if not line:
-                continue
-
+        log.info("Arduino ingester started...")
+        while True:
             try:
-                self._process_line(line)
+                if self._debug:
+                    payload = self._generate_fake_data()
+                    data = SensorData(**payload)
+                    log.info(f"Ingesting (DEBUG) sensor data: {payload}...")
+                    await self._bus.publish(data)
+                else:
+                    line = self._serial.readline().decode("utf-8").strip()
+                    if not line:
+                        continue
+                    self._process_line(line)
             except Exception as e:
-                log.error(f"Error processing line from Arduino: {line} | {e}...")
+                log.error(f"Invalid data from Arduino: {e}...")
 
-            await asyncio.sleep(0)  # yield control
+            await asyncio.sleep(_INGESTER_TIMEOUT)
 
     def _process_line(self, line: str):
         """Parse Arduino serial output and extract sensor data"""
@@ -66,7 +77,7 @@ class Ingester:
         if line.startswith("{"):
             data = json.loads(line)
             sensor_data = self._parse_json_data(data)
-            asyncio.create_task(self._processor.add(sensor_data.model_dump()))
+            asyncio.create_task(self._bus.publish(sensor_data))
             return
 
         # Parse text format from Arduino
@@ -88,7 +99,7 @@ class Ingester:
             # When we have both temp and humidity, send data
             if self._temp is not None and self._humidity is not None and self._light_level is not None:
                 sensor_data = self._create_sensor_data()
-                asyncio.create_task(self._processor.add(sensor_data.model_dump()))
+                asyncio.create_task(self._bus.publish(sensor_data))
                 # Reset for next reading
                 self._temp = None
                 self._humidity = None
@@ -135,7 +146,19 @@ class Ingester:
         )
 
     def stop(self):
-        self._running = False
         if self._serial:
             self._serial.close()
         log.info("Stopping ingester...")
+
+    def _generate_fake_data(self) -> dict:
+        """Generate fake sensor data for debug mode"""
+        return {
+            "dht11": {
+                "temperature": round(random.uniform(20, 35), 2),
+                "humidity": round(random.uniform(40, 90), 2),
+            },
+            "light": {
+                "light_level": random.randint(0, 1023),
+                "is_bright": random.choice([True, False]),
+            }
+        }

@@ -1,5 +1,10 @@
-from dataclasses import dataclass
+import asyncio
 
+from dataclasses import dataclass
+from asyncio import Task
+from typing import Final
+
+from pi_server.core.bus import EventBus
 from pi_server.core.processor import Processor
 from pi_server.core.ingester import Ingester
 
@@ -11,21 +16,34 @@ from pi_server.core.ingester import Ingester
 ===============================================================================
 """
 
+DEBUG_MODE: Final[bool] = True
+
+
 @dataclass(slots=True)
 class Manager:
+    _event_bus: EventBus
     _processor: Processor
     _ingester: Ingester
+    _tasks: list[Task]
 
     def __init__(self) -> None:
-        self._processor = Processor()
-        self._ingester = Ingester(self._processor)
+        self._event_bus = EventBus()
+        self._processor = Processor(self._event_bus, debug=DEBUG_MODE)
+        self._ingester = Ingester(self._event_bus, debug=DEBUG_MODE)
+        self._tasks = []
 
     async def start(self):
-        await self._processor.start()
-        await self._ingester.start()
+        self._tasks = [
+            asyncio.create_task(self._processor.start()),
+            asyncio.create_task(self._ingester.start()),
+        ]
+        await asyncio.gather(*self._tasks, return_exceptions=True)
 
     async def stop(self):
+        for task in self._tasks:
+            task.cancel()
+
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+
         await self._processor.stop()
         self._ingester.stop()
-
-    
