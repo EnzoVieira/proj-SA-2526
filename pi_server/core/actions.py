@@ -18,7 +18,8 @@ from pi_server.core.domain import ConditionLabel, SensorData
 
 log = logging.getLogger(__name__)
 
-_TIMEOUT: Final[int] = 10 # seconds 
+_TIMEOUT: Final[int] = 10  # seconds
+
 
 # TODO: call the home assistant api, this is just an example...
 @dataclass(slots=True)
@@ -33,9 +34,8 @@ class ActionHandler:
     async def handle(self, label: ConditionLabel, data: SensorData) -> None:
         if label == ConditionLabel.COLD:
             await self.cooling_system_on(data)
-
         else:
-            log.info("Normal conditions...")
+            log.warning("Not existing label...")
 
     async def cooling_system_on(self, data: SensorData):
         log.info("Cooling system activated")
@@ -57,3 +57,4 @@ class ActionHandler:
 
     async def close(self):
         await self.client.aclose()
+        log.info("Closing action handler...")

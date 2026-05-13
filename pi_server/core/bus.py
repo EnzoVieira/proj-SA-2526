@@ -15,6 +15,7 @@ from pi_server.core.domain import SensorData
 
 _QUEUE_MAXSIZE: Final[int] = 100
 
+
 @dataclass(slots=True)
 class EventBus:
     _queue: Queue[SensorData]
@@ -30,4 +31,3 @@ class EventBus:
 
     def task_done(self) -> None:
         self._queue.task_done()
-
