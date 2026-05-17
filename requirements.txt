@@ -1,0 +1,14 @@
+# Runtime
+pydantic
+httpx
+pyserial
+scikit-learn
+joblib
+numpy
+pandas
+
+# Dev / notebooks
+matplotlib
+seaborn
+jupyter
+ruff

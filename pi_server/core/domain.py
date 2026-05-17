@@ -5,17 +5,22 @@ from pydantic import BaseModel
 """
 ===============================================================================
 
-    Domain	
+    Domain
 
 ===============================================================================
 """
 
-class ConditionLabel(str, Enum):
-    COLD = "cold"
-    HOT = "hot"
-    NORMAL = "normal"
-    DARK = "dark"
-    BRIGHT = "bright"
+
+class BlindsAction(str, Enum):
+    RAISE = "raise"
+    LOWER = "lower"
+    KEEP = "keep"
+
+
+class ACAction(str, Enum):
+    OFF = "off"
+    COOL = "cool"
+    HEAT = "heat"
 
 
 class DHT11Data(BaseModel):
@@ -30,9 +35,16 @@ class LightSensorData(BaseModel):
     is_bright: bool     # True se light_level >= threshold
 
 
-
 class SensorData(BaseModel):
     """Agregação de todos os dados de sensores"""
     dht11: DHT11Data
     light: LightSensorData
     timestamp: float | None = None
+
+
+class Prediction(BaseModel):
+    """Decisão composta do modelo ML"""
+    blinds: BlindsAction
+    ac: ACAction
+    blinds_confidence: float | None = None
+    ac_confidence: float | None = None

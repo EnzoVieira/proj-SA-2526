@@ -5,14 +5,14 @@ from dataclasses import dataclass
 from typing import Final
 
 from pi_server.core.bus import EventBus
-from pi_server.core.domain import ConditionLabel
+from pi_server.core.domain import Prediction, BlindsAction, ACAction
 from pi_server.ml.ml_model import MLModel
 from pi_server.core.actions import ActionHandler
 
 """
 ===============================================================================
 
-    Processor	
+    Processor
 
 ===============================================================================
 """
@@ -33,12 +33,10 @@ class Processor:
     def __init__(self, bus: EventBus, *, debug: bool = False):
         self._bus = bus
         self._debug = debug
-        if self._debug:
-            self._model = None
-            log.warning("Processor in DEBUG MODE...")
-        else:
-            self._model = MLModel()
+        self._model = MLModel()
         self._actions = ActionHandler(_HOME_ASSISTANT_URL)
+        if self._debug:
+            log.warning("Processor in DEBUG MODE...")
 
     async def start(self):
         log.info("Starting processor...")
@@ -46,12 +44,9 @@ class Processor:
             data = await self._bus.consume()
             try:
                 log.info(f"Predicting label of data: {data}...")
-                if self._debug:
-                    label = self._random_label()
-                else:
-                    label = self._model.predict(data)
-                log.info(f"Handling label: {label}...")
-                await self._actions.handle(label, data)
+                prediction = self._model.predict(data)
+                log.info(f"Handling prediction: {prediction}...")
+                await self._actions.handle(prediction, data)
             except Exception as e:
                 log.error(f"Error in worker: {e}...")
             finally:
@@ -61,5 +56,8 @@ class Processor:
         await self._actions.close()
         log.info("Stopping processor...")
 
-    def _random_label(self) -> ConditionLabel:
-        return random.choice(list(ConditionLabel))
+    def _random_prediction(self) -> Prediction:
+        return Prediction(
+            blinds=random.choice(list(BlindsAction)),
+            ac=random.choice(list(ACAction)),
+        )

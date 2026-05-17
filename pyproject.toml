@@ -8,9 +8,16 @@ dependencies = [
 	"pydantic",
 	"httpx",
 	"pyserial",
+	"scikit-learn",
+	"joblib",
+	"numpy",
+	"pandas",
 ]
 
 [dependency-groups]
 dev = [
     "ruff >= 0.8.1",
+    "matplotlib",
+    "seaborn",
+    "jupyter",
 ]

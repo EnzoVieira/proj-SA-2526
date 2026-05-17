@@ -19,7 +19,7 @@ async def main():
     manager = Manager()
     try:
         await manager.start()
-    except KeyboardInterrupt, asyncio.CancelledError:
+    except (KeyboardInterrupt, asyncio.CancelledError):
         log.info("Shutting down...")
     finally:
         await manager.stop()
