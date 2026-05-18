@@ -16,7 +16,7 @@ from pi_server.core.ingester import Ingester
 ===============================================================================
 """
 
-DEBUG_MODE: Final[bool] = True
+DEBUG_MODE: Final[bool] = False
 
 
 @dataclass(slots=True)

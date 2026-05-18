@@ -8,7 +8,8 @@ import re
 from typing import Final
 from dataclasses import dataclass
 
-from serial import Serial
+from serial import Serial, SerialException
+from serial.tools import list_ports
 
 from pi_server.core.bus import EventBus
 from pi_server.core.domain import SensorData, DHT11Data, LightSensorData
@@ -23,7 +24,7 @@ from pi_server.core.domain import SensorData, DHT11Data, LightSensorData
 
 log = logging.getLogger(__name__)
 
-_PORT: Final[str] = "..."
+_PORT: Final[str] = "COM6" #change where arduino is connected
 _BAUDRATE: Final[int] = 9600
 _SERIAL_TIMEOUT: Final[int] = 1  # second
 _INGESTER_TIMEOUT: Final[int] = 2  # seconds
@@ -34,6 +35,7 @@ class Ingester:
     _bus: EventBus
     _serial: Serial | None
     _debug: bool
+    _port: str | None = None
     _temp: float | None = None
     _humidity: float | None = None
     _light_level: int | None = None
@@ -47,9 +49,30 @@ class Ingester:
         
         if self._debug:
             self._serial = None
+            self._port = None
             log.warning("Running ingester in DEBUG mode")
         else:
-            self._serial = Serial(_PORT, _BAUDRATE, timeout=_SERIAL_TIMEOUT)
+            # Determine preferred port now but do NOT open it yet.
+            port = _PORT
+            if not port or port == "...":
+                ports = list(list_ports.comports())
+                candidate = None
+                for p in ports:
+                    desc = (p.description or "").lower()
+                    if "arduino" in desc or "usb" in desc or "wch" in desc or "ch340" in desc:
+                        candidate = p.device
+                        break
+                if candidate is None and ports:
+                    candidate = ports[0].device
+                if candidate is None:
+                    log.warning("No serial ports found at init. Will retry on start.")
+                    port = None
+                else:
+                    port = candidate
+                    log.info(f"Auto-detected serial port: {port}")
+
+            self._serial = None
+            self._port = port
 
     async def start(self):
         log.info("Arduino ingester started...")
@@ -61,6 +84,29 @@ class Ingester:
                     log.info(f"Ingesting (DEBUG) sensor data: {payload}...")
                     await self._bus.publish(data)
                 else:
+                    # Ensure serial is open, try to (re)connect if needed.
+                    if self._serial is None:
+                        try:
+                            if not self._port:
+                                # attempt auto-detect again
+                                ports = list(list_ports.comports())
+                                if ports:
+                                    self._port = ports[0].device
+                                    log.info(f"Auto-detected serial port on start: {self._port}")
+                            if self._port:
+                                self._serial = Serial(self._port, _BAUDRATE, timeout=_SERIAL_TIMEOUT)
+                                log.info(f"Connected to serial port {self._port}")
+                        except SerialException as e:
+                            log.warning(f"Could not open serial port {self._port}: {e}")
+                            self._serial = None
+                            # skip reading this cycle
+                            await asyncio.sleep(_INGESTER_TIMEOUT)
+                            continue
+
+                    if not self._serial:
+                        await asyncio.sleep(_INGESTER_TIMEOUT)
+                        continue
+
                     line = self._serial.readline().decode("utf-8").strip()
                     if not line:
                         continue
