@@ -24,7 +24,7 @@ from pi_server.core.domain import SensorData, DHT11Data, LightSensorData
 
 log = logging.getLogger(__name__)
 
-_PORT: Final[str] = "COM6" #change where arduino is connected
+_PORT: Final[str] = "/dev/ttyACM0" #change where arduino is connected
 _BAUDRATE: Final[int] = 9600
 _SERIAL_TIMEOUT: Final[int] = 1  # second
 _INGESTER_TIMEOUT: Final[int] = 2  # seconds
