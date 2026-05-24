@@ -9,7 +9,6 @@ rsync -avz --delete \
   --exclude '.venv' \
   --exclude '__pycache__' \
   --exclude '.git' \
-  --exclude '.env' \
   --exclude 'logs' \
   --exclude '*.pyc' \
   --exclude 'assets/models' \

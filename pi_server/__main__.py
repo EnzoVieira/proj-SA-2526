@@ -1,5 +1,7 @@
 import asyncio
 
+from dotenv import load_dotenv
+
 from pi_server.core.manager import Manager
 from pi_server.utils.logger import get_logger
 
@@ -15,6 +17,7 @@ log = get_logger("server", console=True)
 
 
 async def main():
+    load_dotenv()
     log.info("Starting server...")
     manager = Manager()
     try:

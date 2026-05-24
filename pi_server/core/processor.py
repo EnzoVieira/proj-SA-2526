@@ -2,7 +2,6 @@ import random
 import logging
 
 from dataclasses import dataclass
-from typing import Final
 
 from pi_server.core.bus import EventBus
 from pi_server.core.domain import Prediction, BlindsAction, ACAction
@@ -16,9 +15,6 @@ from pi_server.core.actions import ActionHandler
 
 ===============================================================================
 """
-
-# TODO: finish this i no clue this shit url
-_HOME_ASSISTANT_URL: Final[str] = "..."
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +30,7 @@ class Processor:
         self._bus = bus
         self._debug = debug
         self._model = MLModel()
-        self._actions = ActionHandler(_HOME_ASSISTANT_URL)
+        self._actions = ActionHandler()
         if self._debug:
             log.warning("Processor in DEBUG MODE...")
 
