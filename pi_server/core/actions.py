@@ -48,10 +48,10 @@ class ActionHandler:
         self._last_cover_op = None
 
     async def handle(self, prediction: Prediction, data: SensorData) -> None:
-        # prediction ignored by design — comfort_policy owns the actuation logic.
-        decision = decide(data)
+        decision = decide(prediction)
         log.info(
-            f"Action plan: hvac_mode={decision.hvac_mode}, cover_op={decision.cover_op} "
+            f"Action plan: thermal={prediction.thermal.value}, lum={prediction.luminosity.value} "
+            f"-> hvac={decision.hvac_mode}, cover={decision.cover_op} "
             f"(temp={data.dht11.temperature}°C, humidity={data.dht11.humidity}%, "
             f"light={data.light.light_level})"
         )

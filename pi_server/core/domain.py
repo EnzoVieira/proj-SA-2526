@@ -11,16 +11,16 @@ from pydantic import BaseModel
 """
 
 
-class BlindsAction(str, Enum):
-    RAISE = "raise"
-    LOWER = "lower"
-    KEEP = "keep"
+class ThermalComfort(str, Enum):
+    HOT = "hot"
+    NEUTRAL = "neutral"
+    COLD = "cold"
 
 
-class ACAction(str, Enum):
-    OFF = "off"
-    COOL = "cool"
-    HEAT = "heat"
+class LuminosityComfort(str, Enum):
+    TOO_BRIGHT = "too_bright"
+    NEUTRAL = "neutral"
+    TOO_DARK = "too_dark"
 
 
 class DHT11Data(BaseModel):
@@ -43,8 +43,8 @@ class SensorData(BaseModel):
 
 
 class Prediction(BaseModel):
-    """Decisão composta do modelo ML"""
-    blinds: BlindsAction
-    ac: ACAction
-    blinds_confidence: float | None = None
-    ac_confidence: float | None = None
+    """Labels de conforto previstas pelo modelo ML"""
+    thermal: ThermalComfort
+    luminosity: LuminosityComfort
+    thermal_confidence: float | None = None
+    luminosity_confidence: float | None = None

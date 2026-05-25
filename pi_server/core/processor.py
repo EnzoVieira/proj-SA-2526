@@ -1,10 +1,8 @@
-import random
 import logging
 
 from dataclasses import dataclass
 
 from pi_server.core.bus import EventBus
-from pi_server.core.domain import Prediction, BlindsAction, ACAction
 from pi_server.ml.ml_model import MLModel
 from pi_server.core.actions import ActionHandler
 
@@ -51,9 +49,3 @@ class Processor:
     async def stop(self):
         await self._actions.close()
         log.info("Stopping processor...")
-
-    def _random_prediction(self) -> Prediction:
-        return Prediction(
-            blinds=random.choice(list(BlindsAction)),
-            ac=random.choice(list(ACAction)),
-        )

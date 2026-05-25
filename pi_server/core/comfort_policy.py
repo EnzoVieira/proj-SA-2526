@@ -1,10 +1,13 @@
 import logging
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Final
 
-from pi_server.core.domain import SensorData
+from pi_server.core.domain import (
+    LuminosityComfort,
+    Prediction,
+    ThermalComfort,
+)
 
 """
 ===============================================================================
@@ -16,46 +19,11 @@ from pi_server.core.domain import SensorData
 
 log = logging.getLogger(__name__)
 
-_HOT_THRESHOLD:    Final[float] = 26.0
-_COLD_THRESHOLD:   Final[float] = 18.0
-_BRIGHT_THRESHOLD: Final[int]   = 750
-_DARK_THRESHOLD:   Final[int]   = 300
-
-
-class ThermalComfort(str, Enum):
-    HOT = "hot"
-    NEUTRAL = "neutral"
-    COLD = "cold"
-
-
-class LuminosityComfort(str, Enum):
-    TOO_BRIGHT = "too_bright"
-    NEUTRAL = "neutral"
-    TOO_DARK = "too_dark"
-
 
 @dataclass(slots=True, frozen=True)
 class ActionDecision:
     hvac_mode: str | None  # "off" | "cool" | "heat" | None (no-op)
     cover_op: str | None   # "open_cover" | "close_cover" | None (keep)
-
-
-def classify_thermal(data: SensorData) -> ThermalComfort:
-    temperature = data.dht11.temperature
-    if temperature > _HOT_THRESHOLD:
-        return ThermalComfort.HOT
-    if temperature < _COLD_THRESHOLD:
-        return ThermalComfort.COLD
-    return ThermalComfort.NEUTRAL
-
-
-def classify_luminosity(data: SensorData) -> LuminosityComfort:
-    light_level = data.light.light_level
-    if light_level > _BRIGHT_THRESHOLD:
-        return LuminosityComfort.TOO_BRIGHT
-    if light_level < _DARK_THRESHOLD:
-        return LuminosityComfort.TOO_DARK
-    return LuminosityComfort.NEUTRAL
 
 
 # Conflict cells avoid working against the thermal goal:
@@ -77,12 +45,10 @@ _POLICY: Final[dict[tuple[ThermalComfort, LuminosityComfort], ActionDecision]] =
 }
 
 
-def decide(data: SensorData) -> ActionDecision:
-    thermal = classify_thermal(data)
-    luminosity = classify_luminosity(data)
-    decision = _POLICY[(thermal, luminosity)]
+def decide(prediction: Prediction) -> ActionDecision:
+    decision = _POLICY[(prediction.thermal, prediction.luminosity)]
     log.debug(
-        f"comfort: thermal={thermal.value}, luminosity={luminosity.value} "
+        f"comfort: thermal={prediction.thermal.value}, luminosity={prediction.luminosity.value} "
         f"-> hvac_mode={decision.hvac_mode}, cover_op={decision.cover_op}"
     )
     return decision

@@ -91,7 +91,6 @@ Desktop.ini
 
 # Home Assistant / project-specific
 data/
-models/*.joblib
 serial_dump.txt
 
 # Temporary files

@@ -1,7 +1,8 @@
 """
 ===============================================================================
 
-    Train two RandomForest classifiers (AC + Blinds) and persist as joblib.
+    Train two RandomForest classifiers (thermal + luminosity comfort) and
+    persist as joblib bundles.
 
     Uso:
         uv run -m pi_server.ml.train
@@ -25,8 +26,8 @@ from sklearn.tree import DecisionTreeClassifier
 
 # Features de cada modelo. Mantidas em constantes para o ml_model.py reusar
 # e garantir consistência entre treino e inferência.
-AC_FEATURES: list[str] = ["temperature", "humidity"]
-BLINDS_FEATURES: list[str] = ["light_level", "temperature"]
+THERMAL_FEATURES:    list[str] = ["temperature", "humidity"]
+LUMINOSITY_FEATURES: list[str] = ["light_level", "hour_of_day"]
 
 
 @dataclass(slots=True)
@@ -87,38 +88,40 @@ def _print_results(tm: TrainedModel) -> None:
     print("\nClassification report:")
     print(tm.report)
     print("Confusion matrix (rows=true, cols=pred):")
-    header = "          " + "  ".join(f"{c:>6}" for c in tm.classes)
+    header = "          " + "  ".join(f"{c:>10}" for c in tm.classes)
     print(header)
     for cls, row in zip(tm.classes, tm.confusion):
-        print(f"{cls:>10}  " + "  ".join(f"{v:>6d}" for v in row))
+        print(f"{cls:>10}  " + "  ".join(f"{v:>10d}" for v in row))
 
 
 def train_all(dataset_path: Path, models_dir: Path, seed: int = 42) -> None:
     df = pd.read_csv(dataset_path)
     print(f"Loaded {len(df)} samples from {dataset_path}")
 
-    ac = _train_one(df, AC_FEATURES, "ac_action", "AC classifier", seed)
-    blinds = _train_one(
-        df, BLINDS_FEATURES, "blinds_action", "Blinds classifier", seed
+    thermal = _train_one(
+        df, THERMAL_FEATURES, "thermal_comfort", "Thermal comfort classifier", seed
+    )
+    luminosity = _train_one(
+        df, LUMINOSITY_FEATURES, "luminosity_comfort", "Luminosity comfort classifier", seed
     )
 
-    _print_results(ac)
-    _print_results(blinds)
+    _print_results(thermal)
+    _print_results(luminosity)
 
     models_dir.mkdir(parents=True, exist_ok=True)
-    ac_path = models_dir / "ac.joblib"
-    blinds_path = models_dir / "blinds.joblib"
+    thermal_path = models_dir / "thermal.joblib"
+    luminosity_path = models_dir / "luminosity.joblib"
 
     # Empacotar metadata junto com o estimador para o loader saber as features
-    joblib.dump({"model": ac.model, "features": AC_FEATURES}, ac_path)
-    joblib.dump({"model": blinds.model, "features": BLINDS_FEATURES}, blinds_path)
+    joblib.dump({"model": thermal.model, "features": THERMAL_FEATURES}, thermal_path)
+    joblib.dump({"model": luminosity.model, "features": LUMINOSITY_FEATURES}, luminosity_path)
 
-    print(f"\nSaved AC model     → {ac_path}")
-    print(f"Saved blinds model → {blinds_path}")
+    print(f"\nSaved thermal model    → {thermal_path}")
+    print(f"Saved luminosity model → {luminosity_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Treina classificadores AC e blinds.")
+    parser = argparse.ArgumentParser(description="Treina classificadores de conforto.")
     parser.add_argument(
         "--dataset",
         type=Path,
