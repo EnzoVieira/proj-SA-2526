@@ -44,6 +44,18 @@ uv run -m pi_server.ml.train      # writes assets/models/{thermal,luminosity}.jo
 
 For dataset and model design details, see `.claude/docs/ml_models.md`.
 
+### Simulate energy consumption (no hardware required)
+
+To estimate the energy savings the controller would deliver without running the server for hours on real hardware, a synthetic-day simulator is provided. It feeds 24 hourly readings from three Braga archetypes (winter, mid-season, summer) through the **real** trained models and the comfort policy, and compares the resulting AC active-time against two baselines (an "always-on" user and a "manual reactive" user).
+
+```sh
+uv run -m pi_server.eval.simulate_day
+```
+
+Prerequisites: the joblib bundles in `assets/models/` must already exist (run `uv run -m pi_server.ml.train` first if not).
+
+The script prints Markdown tables to stdout — one per archetype plus a synthesis table with `kWh/day` per policy and the percentage reduction against each baseline. Pipe the output straight into the report or any Markdown viewer. To tweak the assumptions (AC nominal power, reactive-user thresholds, hourly climate profiles), edit the `_`-prefixed constants at the top of `pi_server/eval/simulate_day.py` and rerun.
+
 ### Developer commands
 
 ```sh
